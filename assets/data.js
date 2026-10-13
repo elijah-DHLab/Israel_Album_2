@@ -3,7 +3,22 @@ export const clean = v => String(v ?? '').trim();
 export const label = (a,lang='he') => clean(lang==='en'?a?.title_en||a?.title_he:a?.title_he||a?.title_en)||clean(a?.id);
 export const esc = v => clean(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const year = a => {const y=Number(a?.year);return y>1800&&y<2100?y:null};
-export const imageSrc = img => clean(img?.uri).split('?')[0];
+// Prefer the same static image files that made the original GitHub Pages site work.
+// The raw GitHub fallback also supports fresh deployments and offline.html on disk.
+export function imageCandidates(img){
+  if(!img)return [];
+  const id=clean(img.image_id);
+  const sources=[];
+  if(id && /^[0-9a-f-]{12,}$/i.test(id)){
+    sources.push('./images/'+encodeURIComponent(id)+'.jpg');
+    sources.push('https://raw.githubusercontent.com/eliezerba/Israel_Album/main/images/'+encodeURIComponent(id)+'.jpg');
+  }
+  const uri=clean(img.uri);
+  if(/^https:\/\//i.test(uri))sources.push(uri.split('?')[0]);
+  return [...new Set(sources)];
+}
+export const imageSrc = img => imageCandidates(img)[0]||'';
+
 export function parseMeta(caption){const m={};for(const p of clean(caption).split(/\s+\|\s+/)){const idx=p.indexOf(':');if(idx<0)continue;const k=p.slice(0,idx).trim(),v=p.slice(idx+1).trim();if(['Caption','Description','Scene','Objects','Vibe','People','Text','Actions'].includes(k))m[k]=v}return m;}
 export function imageMeta(img){return img._meta||(img._meta=parseMeta(img.caption))}
 export const tags=s=>clean(s).split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
